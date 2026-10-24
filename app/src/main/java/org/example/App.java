@@ -48,7 +48,7 @@ public class App {
                                                  // is why its perfect in this situation
         new Thread(app::connect).start();
     }
-
+    //
     private void makeUi() {
         frame = new JFrame("Camera output");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
