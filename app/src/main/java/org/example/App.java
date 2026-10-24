@@ -18,6 +18,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import org.example.Enum.Ids;
+import org.jspecify.annotations.Nullable;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.Scalar;
@@ -34,9 +35,7 @@ public class App {
     private JLabel label;
     private JFrame frame;
     private boolean firstFrame = true;
-    private static final int port = 4747;
-    private static final String phone_ip = "192.168.0.89"; // change these depending on your app; im using droidcam
-                                                           // because i can get this information easily
+
 
     private ArucoDetector detector;
 
@@ -82,7 +81,7 @@ public class App {
         });
     }
 
-    private BufferedImage processFrameForApriltag(byte[] jpg, double fps, String resolution, long uptimeSeconds)
+    private @Nullable BufferedImage processFrameForApriltag(byte[] jpg, double fps, String resolution, long uptimeSeconds)
             throws Exception {
         Mat color = Imgcodecs.imdecode(new MatOfByte(jpg), Imgcodecs.IMREAD_COLOR); // a Mat is essentially an image
                                                                                     // container; stored in native
@@ -102,7 +101,7 @@ public class App {
         int textYPosition = 28;
 
         Imgproc.putText(color, fpsText, new Point(20, textYPosition), font, fontScale, textColor, hudTextThickness);
-        Imgproc.putText(color, resolution, new Point(color.cols() / 2 - 50, textYPosition), font, fontScale, textColor,
+        Imgproc.putText(color, resolution, new Point((double) color.cols() / 2 - 50, textYPosition), font, fontScale, textColor, // color.cols() gets the vertical columns; /2 gets the centerline; -50 puts it at a reasonable spot
                 hudTextThickness);
         Imgproc.putText(color, String.valueOf(uptimeSeconds), new Point(color.cols() - 150, textYPosition), font,
                 fontScale, textColor, hudTextThickness);
@@ -124,9 +123,15 @@ public class App {
                 for (int j = 0; j < 4; j++) {
                     Imgproc.line(color, pts[j], pts[(j + 1) % 4], new Scalar(0, 255, 0), thickness);
                 }
+                double pixelWidth = ((pts[1].x - pts[0].x) + (pts[2].x - pts[3].x)) / 2.0;
+                double totalDistance = (Constants.Measurements.APRILTAG_SIZE * (color.cols() * 1.2)) / pixelWidth;
+
+                Point cameraOrigin = new Point((double) color.cols() /2, (double) color.rows() / 2);
+                Point tagOrigin = new Point((pts[0].x + pts[2].x) / 2.0, (pts[0].y + pts[2].y) / 2.0);
+                Imgproc.line(color, cameraOrigin, tagOrigin, new Scalar(255, 0, 0), 2);
 
                 int id = (int) ids.get(i, 0)[0];
-                Imgproc.putText(color, "  ID " + id, pts[0], Imgproc.FONT_HERSHEY_SIMPLEX, // just draw the ID text,
+                Imgproc.putText(color, String.format("  ID %d (%.2fm) ", id, totalDistance), pts[0], Imgproc.FONT_HERSHEY_SIMPLEX, // just draw the ID text,
                                                                                            // since
                                                                                            // we cant change certain
                                                                                            // properties of the lines
@@ -160,7 +165,7 @@ public class App {
     }
 
     private void connect() {
-        String streamUrl = "http://" + phone_ip + ":" + port + "/video";
+        String streamUrl = "http://" + Constants.Http.PHONE_IP + ":" + Constants.Http.PORT + "/video";
         System.out.println(streamUrl);
 
         while (true) {
